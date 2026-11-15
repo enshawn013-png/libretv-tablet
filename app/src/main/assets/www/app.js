@@ -5,12 +5,25 @@
  */
 
 const DEFAULT_SOURCES = [
-  { name: '360', url: 'https://360zy.com/api.php/provide/vod', on: true },
-  { name: '吉吉', url: 'https://caiji.jjzyapi.com/api.php/provide/vod', on: true },
-  { name: '非凡', url: 'https://ffzy5.tv/api.php/provide/vod', on: true },
-  { name: '电影天堂', url: 'http://caiji.dyttzyapi.com/api.php/provide/vod', on: true },
-  { name: '猫眼', url: 'https://api.maoyanapi.top/api.php/provide/vod', on: true },
-  { name: '量子', url: 'https://cj.lziapi.com/api.php/provide/vod', on: false },
+  { name: "暴风", url: "https://bfzyapi.com/api.php/provide/vod", on: true },
+  { name: "最大", url: "http://zuidazy.me/api.php/provide/vod", on: true },
+  { name: "量子", url: "https://cj.lziapi.com/api.php/provide/vod", on: true },
+  { name: "155", url: "https://155api.com/api.php/provide/vod", on: true },
+  { name: "光速", url: "https://api.guangsuapi.com/api.php/provide/vod", on: true },
+  { name: "极速", url: "https://jszyapi.com/api.php/provide/vod", on: true },
+  { name: "红牛", url: "http://hongniuzy2.com/api.php/provide/vod", on: true },
+  { name: "虎牙", url: "https://www.huyaapi.com/api.php/provide/vod", on: true },
+  { name: "速播", url: "https://subocj.com/api.php/provide/vod", on: true },
+  { name: "金鹰", url: "https://jinyingzy.com/api.php/provide/vod", on: true },
+  { name: "非凡", url: "https://ffzy5.tv/api.php/provide/vod", on: true },
+  { name: "电影天堂", url: "http://caiji.dyttzyapi.com/api.php/provide/vod", on: true },
+  { name: "吉吉", url: "https://caiji.jjzyapi.com/api.php/provide/vod", on: true },
+  { name: "360", url: "https://360zy.com/api.php/provide/vod", on: true },
+  { name: "U酷", url: "https://api.ukuapi88.com/api.php/provide/vod", on: true },
+  { name: "爱奇艺", url: "https://iqiyizyapi.com/api.php/provide/vod", on: true },
+  { name: "林中小屋 · 木机", url: "https://mujiziyuan00.com/api.php/provide/vod", on: true },
+  { name: "猫眼", url: "https://api.maoyanapi.top/api.php/provide/vod", on: true },
+  { name: "豆豆", url: "https://api.ddapi.cc/api.php/provide/vod", on: true },
 ];
 
 const HOT = ['庆余年', '繁花', '流浪地球', '狂飙', '三体'];

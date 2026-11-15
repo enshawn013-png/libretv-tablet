@@ -30,5 +30,6 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
+    // 故意不依赖 AndroidX / AppCompat：这个壳只用系统 API，
+    // 少一层依赖就少一处「启动即崩」的可能（第一版就是栽在这上面）
 }

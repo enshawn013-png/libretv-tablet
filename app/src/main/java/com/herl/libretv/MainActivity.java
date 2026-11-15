@@ -41,6 +41,7 @@ public class MainActivity extends Activity {
 
     private WebView web;
     private FrameLayout root;
+    private TextView overlay;
     private View customView;
     private WebChromeClient.CustomViewCallback customCallback;
 
@@ -53,6 +54,16 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#0F1115"));
         setContentView(root);
+
+        // 状态提示层：连不上时黑屏最难受，这里明确写出「正在连哪个地址 / 失败原因」
+        overlay = new TextView(this);
+        overlay.setTextColor(Color.parseColor("#9A9AA0"));
+        overlay.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        overlay.setGravity(android.view.Gravity.CENTER);
+        overlay.setPadding(64, 64, 64, 64);
+        overlay.setText("准备连接…");
+        root.addView(overlay, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         try {
             web = new WebView(this);
@@ -89,7 +100,33 @@ public class MainActivity extends Activity {
 
         web.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                if (overlay != null) {
+                    overlay.setVisibility(View.VISIBLE);
+                    overlay.setText("正在连接
+" + url + "
+
+（10 秒还没反应说明网络不通）");
+                }
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (overlay != null) overlay.setVisibility(View.GONE);
+            }
+
+            @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                if (overlay != null) {
+                    overlay.setVisibility(View.VISIBLE);
+                    overlay.setText("连不上服务器
+" + failingUrl + "
+
+原因：" + description
+                            + "
+
+检查：① 电脑上 LibreTV 在跑 ② 平板和电脑同一 Wi-Fi ③ 地址端口是 8080");
+                }
                 showServerDialog("连不上服务器：" + description);
             }
         });

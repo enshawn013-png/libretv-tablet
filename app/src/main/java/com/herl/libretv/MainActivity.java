@@ -2,13 +2,8 @@ package com.herl.libretv;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.InputType;
-import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,31 +12,30 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
 /**
- * LibreTV 安卓平板客户端（全屏 WebView）。
+ * LibreTV 本地版：整个界面（HTML/JS/CSS + hls.js）都打包在 APK 里，
+ * 打开就能用，不需要电脑、不需要服务器。
  *
- * 刻意极简：只继承系统 Activity、不引 AppCompat —— 上一版在部分平板上
- * 启动即崩，很可能就是主题/依赖组合的问题，去掉一层依赖就少一处崩溃面。
+ * 唯一的外网依赖是各家采集站的接口 —— 那些本来就是在线资源。
  *
- * 关键 WebView 设置（缺一个就「能打开但播不了」）：
- *   usesCleartextTraffic   服务器是 http，不放开白屏
- *   setMediaPlayback...    hls.js 自动起播
- *   setDomStorageEnabled   前端用 localStorage 存设置和进度
- *   onShowCustomView       网页全屏播放要真全屏
+ * 关键设置（缺一个就「能打开但搜不到 / 播不了」）：
+ *   setAllowUniversalAccessFromFileURLs(true)
+ *       file:// 页面直接 fetch 各家 http(s) 接口，否则全部被 CORS 拦掉
+ *   setAllowFileAccessFromFileURLs(true)
+ *       同理，允许本地页面访问本地资源
+ *   setMediaPlaybackRequiresUserGesture(false)
+ *       hls.js 自动起播
+ *   onShowCustomView / onHideCustomView
+ *       网页全屏播放要真全屏
  */
 public class MainActivity extends Activity {
 
-    private static final String PREFS = "libretv";
-    private static final String KEY_URL = "server_url";
+    private static final String HOME = "file:///android_asset/www/index.html";
 
     private WebView web;
     private FrameLayout root;
-    private TextView overlay;
     private View customView;
     private WebChromeClient.CustomViewCallback customCallback;
 
@@ -52,77 +46,30 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         root = new FrameLayout(this);
-        root.setBackgroundColor(Color.parseColor("#0F1115"));
+        root.setBackgroundColor(0xFF0F1115);
         setContentView(root);
 
-        // 状态提示层：连不上时黑屏最难受，这里明确写出「正在连哪个地址 / 失败原因」
-        overlay = new TextView(this);
-        overlay.setTextColor(Color.parseColor("#9A9AA0"));
-        overlay.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        overlay.setGravity(android.view.Gravity.CENTER);
-        overlay.setPadding(64, 64, 64, 64);
-        overlay.setText("准备连接…");
-        root.addView(overlay, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        try {
-            web = new WebView(this);
-            configureWebView();
-            root.addView(web, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        } catch (Throwable t) {
-            // WebView 起不来（系统组件缺失/被禁用）也要给一句人话，而不是直接闪退
-            showFatal(t);
-            return;
-        }
-
-        String url = prefs().getString(KEY_URL, "");
-        if (url == null || url.isEmpty()) {
-            showServerDialog("第一次使用：填 LibreTV 服务地址");
-        } else {
-            web.loadUrl(url);
-        }
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private void configureWebView() {
+        web = new WebView(this);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
-        s.setAllowFileAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setSupportMultipleWindows(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            s.setAllowFileAccessFromFileURLs(true);
+            s.setAllowUniversalAccessFromFileURLs(true);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
 
-        web.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
-                if (overlay != null) {
-                    overlay.setVisibility(View.VISIBLE);
-                    overlay.setText(lines("正在连接", url, "", "（10 秒还没反应说明网络不通）"));
-                }
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                if (overlay != null) overlay.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                if (overlay != null) {
-                    overlay.setVisibility(View.VISIBLE);
-                    overlay.setText(lines("连不上服务器", failingUrl, "", "原因：" + description, "",
-                            "检查：1) 电脑上 LibreTV 在跑  2) 平板和电脑同一 Wi-Fi  3) 端口 8080"));
-                }
-                showServerDialog("连不上服务器：" + description);
-            }
-        });
-
+        web.setWebViewClient(new WebViewClient());
         web.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -135,7 +82,11 @@ public class MainActivity extends Activity {
                 root.addView(view, new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                 web.setVisibility(View.GONE);
-                hideSystemBars();
+                getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
             }
 
             @Override
@@ -145,98 +96,27 @@ public class MainActivity extends Activity {
                 customView = null;
                 web.setVisibility(View.VISIBLE);
                 if (customCallback != null) customCallback.onCustomViewHidden();
-                showSystemBars();
+                getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
             }
         });
-    }
 
-    /** 用 10 号字符拼多行文本，避免在源码里写转义（写错一次整个字符串就断了） */
-    private String lines(String... parts) {
-        StringBuilder sb = new StringBuilder();
-        for (String p : parts) {
-            if (sb.length() > 0) sb.append((char) 10);
-            sb.append(p);
-        }
-        return sb.toString();
-    }
-
-    private SharedPreferences prefs() {
-        return getSharedPreferences(PREFS, MODE_PRIVATE);
-    }
-
-    private void showFatal(Throwable t) {
-        TextView tv = new TextView(this);
-        tv.setTextColor(Color.WHITE);
-        tv.setBackgroundColor(Color.parseColor("#0F1115"));
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        tv.setPadding(48, 120, 48, 48);
-        tv.setText("WebView 无法初始化，系统组件可能被禁用。\n\n" + t);
-        root.addView(tv, new FrameLayout.LayoutParams(
+        web.loadUrl(HOME);
+        root.addView(web, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-    }
-
-    private void showServerDialog(String tip) {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int) (20 * getResources().getDisplayMetrics().density);
-        box.setPadding(pad, pad, pad, 0);
-
-        TextView t = new TextView(this);
-        t.setText(tip + "\n\n填你自己跑着 LibreTV 的地址：\nhttp://<电脑局域网IP>:8080\n装了 Tailscale 也可以填 http://<tailscale-ip>:8080");
-        t.setTextSize(14);
-        box.addView(t);
-
-        final EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
-        input.setHint("http://192.168.1.10:8080");
-        String saved = prefs().getString(KEY_URL, "");
-        if (saved != null) input.setText(saved);
-        box.addView(input);
-
-        new AlertDialog.Builder(this)
-                .setTitle("LibreTV 服务器")
-                .setView(box)
-                .setCancelable(false)
-                .setPositiveButton("连接", (d, w) -> {
-                    String v = input.getText().toString().trim();
-                    if (!v.startsWith("http://") && !v.startsWith("https://")) v = "http://" + v;
-                    if (v.endsWith("/")) v = v.substring(0, v.length() - 1);
-                    prefs().edit().putString(KEY_URL, v).apply();
-                    if (web != null) web.loadUrl(v);
-                })
-                .setNegativeButton("取消", (d, w) -> {
-                    if (web != null) web.setVisibility(View.GONE);
-                    TextView hint = new TextView(MainActivity.this);
-                    hint.setTextColor(Color.parseColor("#9A9AA0"));
-                    hint.setTextSize(16);
-                    hint.setPadding(pad, pad * 3, pad, pad);
-                    hint.setText("没有连接服务器。\n\n长按返回键可以重新弹出地址输入框。");
-                    root.addView(hint);
-                })
-                .show();
-    }
-
-    private void hideSystemBars() {
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-    }
-
-    private void showSystemBars() {
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK && event.isLongPress()) {
-            showServerDialog("修改服务器地址");
-            return true;
-        }
-        if (keyCode == KeyEvent.KEYCODE_BACK && web != null && web.canGoBack()) {
-            web.goBack();
-            return true;
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (customView != null) {
+                // 全屏播放时先退出全屏
+                if (customCallback != null) customCallback.onCustomViewHidden();
+                return true;
+            }
+            if (web != null && web.canGoBack()) {
+                web.goBack();
+                return true;
+            }
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -249,5 +129,9 @@ public class MainActivity extends Activity {
             web = null;
         }
         super.onDestroy();
+    }
+
+    private void setContentView(FrameLayout v) {
+        super.setContentView(v);
     }
 }

@@ -7,7 +7,8 @@
     <application
         android:allowBackup="true"
         android:label="LibreTV"
-
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true"
         android:theme="@style/Theme.LibreTV">

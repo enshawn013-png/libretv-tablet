@@ -103,10 +103,7 @@ public class MainActivity extends Activity {
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 if (overlay != null) {
                     overlay.setVisibility(View.VISIBLE);
-                    overlay.setText("正在连接
-" + url + "
-
-（10 秒还没反应说明网络不通）");
+                    overlay.setText(lines("正在连接", url, "", "（10 秒还没反应说明网络不通）"));
                 }
             }
 
@@ -119,13 +116,8 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 if (overlay != null) {
                     overlay.setVisibility(View.VISIBLE);
-                    overlay.setText("连不上服务器
-" + failingUrl + "
-
-原因：" + description
-                            + "
-
-检查：① 电脑上 LibreTV 在跑 ② 平板和电脑同一 Wi-Fi ③ 地址端口是 8080");
+                    overlay.setText(lines("连不上服务器", failingUrl, "", "原因：" + description, "",
+                            "检查：1) 电脑上 LibreTV 在跑  2) 平板和电脑同一 Wi-Fi  3) 端口 8080"));
                 }
                 showServerDialog("连不上服务器：" + description);
             }
@@ -156,6 +148,16 @@ public class MainActivity extends Activity {
                 showSystemBars();
             }
         });
+    }
+
+    /** 用 10 号字符拼多行文本，避免在源码里写转义（写错一次整个字符串就断了） */
+    private String lines(String... parts) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : parts) {
+            if (sb.length() > 0) sb.append((char) 10);
+            sb.append(p);
+        }
+        return sb.toString();
     }
 
     private SharedPreferences prefs() {

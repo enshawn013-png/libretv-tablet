@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.LibreTV" parent="Theme.AppCompat.NoActionBar">
+    <!-- 用系统主题而不是 AppCompat：少一个依赖就少一处启动崩溃的可能 -->
+    <style name="Theme.LibreTV" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">#0F1115</item>
         <item name="android:statusBarColor">#0F1115</item>
         <item name="android:navigationBarColor">#0F1115</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

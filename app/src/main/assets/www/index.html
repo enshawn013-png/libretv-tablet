@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LibreTV</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="bar">
+  <div class="brand">Libre<span>TV</span></div>
+  <div class="searchBox">
+    <input id="kw" type="search" placeholder="搜片名，例如：庆余年" autocomplete="off" enterkeyhint="search">
+    <button id="go">搜索</button>
+  </div>
+  <button id="openSrc" class="ghost">源</button>
+</header>
+
+<main id="stage">
+  <section id="home">
+    <h2>选源后直接搜索</h2>
+    <p id="srcSummary" class="muted">正在读取源…</p>
+    <div id="quick"></div>
+  </section>
+
+  <section id="results" hidden>
+    <div id="resultHead" class="muted"></div>
+    <div id="grid"></div>
+  </section>
+</main>
+
+<!-- 播放层 -->
+<div id="player" hidden>
+  <div class="pbar">
+    <button id="back">‹ 返回</button>
+    <div id="title" class="ptitle"></div>
+  </div>
+  <video id="video" controls playsinline webkit-playsinline></video>
+  <div id="eps"></div>
+</div>
+
+<!-- 源管理 -->
+<div id="srcPanel" hidden>
+  <div class="panel">
+    <h3>采集源</h3>
+    <p class="muted">勾选要用的源。接口格式：<code>站点/api.php/provide/vod</code></p>
+    <div id="srcList"></div>
+    <div class="row">
+      <input id="newSrcName" placeholder="名称">
+      <input id="newSrcUrl" placeholder="https://站点/api.php/provide/vod">
+      <button id="addSrc">添加</button>
+    </div>
+    <div class="row end">
+      <button id="closeSrc" class="ghost">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script src="hls.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
